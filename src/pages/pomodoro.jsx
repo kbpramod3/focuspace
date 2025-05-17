@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/pomodoro.css";
 
 function Pomodoro() {
-  const initialTime = 25 * 60; // 25 minutes in seconds
-  const [focusDuration, setFocusDuration] = useState(25); // in minutes
-  const [shortBreak, setShortBreak] = useState(5);
-  const [longBreak, setLongBreak] = useState(15);
+  const location = useLocation();
+  const { focusDuration = 25, breakDuration = 5 } = location.state || {};
+  
   const [timeLeft, setTimeLeft] = useState(focusDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
-  
+  const [isFocus, setIsFocus] = useState(true); // Track focus/break
+  const navigate = useNavigate();
+
+  // Request Notification Permission
+  useEffect(() => {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     let timer;
     if (isRunning && timeLeft > 0) {
@@ -17,8 +26,29 @@ function Pomodoro() {
       }, 1000);
     }
 
+    // When timer ends
+    if (isRunning && timeLeft === 0) {
+      setIsRunning(false);
+
+      const nextPhase = isFocus ? "Break" : "Focus";
+      const nextDuration = isFocus ? breakDuration * 60 : focusDuration * 60;
+
+      // Show Notification
+      if (Notification.permission === "granted") {
+        new Notification(`${isFocus ? "Focus" : "Break"} session ended`, {
+          body: `Time for ${nextPhase.toLowerCase()}!`,
+        });
+      }
+
+      setTimeout(() => {
+        setIsFocus(!isFocus);
+        setTimeLeft(nextDuration);
+        setIsRunning(true); // Auto-restart next phase
+      }, 1000); // 1 second delay before next phase starts
+    }
+
     return () => clearInterval(timer);
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, isFocus, focusDuration, breakDuration]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -30,35 +60,21 @@ function Pomodoro() {
   const handlePause = () => setIsRunning(false);
   const handleReset = () => {
     setIsRunning(false);
-    setTimeLeft(initialTime);
+    setTimeLeft(focusDuration * 60);
+    setIsFocus(true);
+  };
+
+  const settings = () => {
+    navigate("/settings", {
+      state: { focusDuration, breakDuration }
+    });
   };
 
   return (
     <div className="pomodoro-container">
-      <div className="settings-section">
-        <h3>Custom Timer Settings</h3>
-        <label>
-          Focus:
-          <input type="number" value={focusDuration} onChange={(e) => setFocusDuration(Number(e.target.value))} />
-          min
-        </label>
-        <label>
-          Short Break:
-          <input type="number" value={shortBreak} onChange={(e) => setShortBreak(Number(e.target.value))} />
-          min
-        </label>
-        <label>
-          Long Break:
-          <input type="number" value={longBreak} onChange={(e) => setLongBreak(Number(e.target.value))} />
-          min
-        </label>
-        <button onClick={() => { setTimeLeft(focusDuration * 60); setIsRunning(false); }}>
-          Apply
-        </button>
-      </div>
-  
+      <button onClick={settings}>Settings</button>
+      <h2>{isFocus ? "Focus Time" : "Break Time"}</h2>
       <h1 className="timer-display">{formatTime(timeLeft)}</h1>
-  
       <div className="control-buttons">
         {!isRunning ? (
           <button onClick={handleStart}>Start</button>
@@ -69,18 +85,6 @@ function Pomodoro() {
       </div>
     </div>
   );
-  
 }
-
-const buttonStyle = {
-  margin: '0 10px',
-  padding: '10px 20px',
-  fontSize: '16px',
-  backgroundColor: '#0d9488',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-};
 
 export default Pomodoro;

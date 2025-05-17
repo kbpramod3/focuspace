@@ -38,24 +38,6 @@ function App() {
       <h1>FocusPace</h1>
       <p>Your personal Pomodoro + productivity tracker</p>
 
-      {isInstallable && (
-        <button
-          onClick={handleInstallClick}
-          style={{
-            marginTop: '2rem',
-            padding: '10px 20px',
-            fontSize: '16px',
-            backgroundColor: '#0d9488',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          Install FocusPace
-        </button>
-      )}
-
     <Link to="/pomodoro" style={{ marginTop: '1rem', display: 'inline-block' }}>
     <button style={{
   padding: '10px 20px',
